@@ -54,7 +54,9 @@ export async function GET(req: NextRequest) {
     // ✅ Step 2: Otherwise fetch fresh from chain
     const provider = new JsonRpcProvider(BASE_RPC);
     const iface = new Interface(ABI);
-    const eventTopic = iface.getEvent("ScoreSubmitted").topicHash;
+    const event = iface.getEvent("ScoreSubmitted");
+    if (!event) throw new Error("Event 'ScoreSubmitted' not found in ABI");
+    const eventTopic = event.topicHash;
     const latestBlock = await provider.getBlockNumber();
 
     const allEvents: any[] = [];
