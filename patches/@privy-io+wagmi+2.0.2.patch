@@ -1,0 +1,8 @@
+diff --git a/node_modules/@privy-io/wagmi/dist/index.js b/node_modules/@privy-io/wagmi/dist/index.js
+new file mode 100644
+index 0000000..be06f6e
+--- /dev/null
++++ b/node_modules/@privy-io/wagmi/dist/index.js
+@@ -0,0 +1,2 @@
++const mod = require("..");
++module.exports = mod;
