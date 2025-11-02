@@ -67,13 +67,3 @@ export async function fetchLeaderboard() {
     return [];
   }
 }
-
-
-
-// -------------------------------
-// (No longer used, kept for safety)
-// -------------------------------
-export async function postScoreToLeaderboard() {
-  // No-op: on-chain leaderboard now
-  return;
-}

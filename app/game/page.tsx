@@ -10,7 +10,7 @@ import SettingsModal from "@/components/SettingsModal";
 import { initializeBoard, move, canMove } from "@/lib/game-logic";
 import { useAccount, useConnect, useDisconnect, useBalance } from "wagmi";
 import { injected } from "wagmi/connectors";
-import { createGameOnChain, submitFinalScoreOnChain, postScoreToLeaderboard } from "@/lib/submitScore";
+import { createGameOnChain, submitFinalScoreOnChain } from "@/lib/submitScore";
 import { ethers } from "ethers";
 import { useRouter } from "next/navigation";
 
@@ -133,8 +133,8 @@ export default function Game() {
           setTimeout(() => setToast(null), 4000);
 
           // ✅ Also post to off-chain leaderboard (optional for now)
-          await postScoreToLeaderboard(signerAddress, newScore);
-          console.log("🎯 Score also posted to leaderboard API!");
+          // await postScoreToLeaderboard(signerAddress, newScore);
+          // console.log("🎯 Score also posted to leaderboard API!");
         } catch (err) {
           console.error("❌ Final submission failed:", err);
           setToast({ message: "Error submitting final score." });
