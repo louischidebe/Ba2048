@@ -23,6 +23,7 @@ export default function Game() {
   // Wagmi hooks for wallet connection
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
+  const [isCreatingGame, setIsCreatingGame] = useState(false);
 
   const [gameId, setGameId] = useState<number | null>(null);
   const [playerAddress, setPlayerAddress] = useState<string | null>(null);
@@ -67,10 +68,6 @@ export default function Game() {
   const submitMove = useCallback(
     async (direction: "up" | "down" | "left" | "right") => {
       if (gameOver || won) return;
-      if (balance < MIN_BALANCE) {
-        setLowBalance(true);
-        return;
-      }
 
       const result = move(board, direction);
       if (!result.moved) return;
@@ -161,13 +158,8 @@ export default function Game() {
 
   // ✅ LOCAL-ONLY New Game (no gas cost)
   const handleNewGame = async () => {
-    const newBoard = initializeBoard();
-    setBoard(newBoard);
-    setMoves(0);
-    setScore(0);
-    setGameOver(false);
-    setWon(false);
-    setGameId(null);
+    if (isCreatingGame) return; // prevent double clicks
+    setIsCreatingGame(true);
 
     try {
       const signer = await getSigner();
@@ -175,17 +167,33 @@ export default function Game() {
       setGameSigner(signer);
       setPlayerAddress(addr);
 
+      const newBoard = initializeBoard();
       const newGameId = await createGameOnChain(signer, newBoard);
+
+      // ✅ Only reset after successful transaction
+      setBoard(newBoard);
+      setMoves(0);
+      setScore(0);
+      setGameOver(false);
+      setWon(false);
       setGameId(newGameId);
 
       setToast({ message: `New onchain game started (#${newGameId})` });
       setTimeout(() => setToast(null), 3000);
-    } catch (err) {
+    } catch (err: any) {
+      if (err.code === 4001) {
+        console.log("User rejected transaction.");
+        return;
+      }
+
       console.error("❌ Error creating onchain game:", err);
       setToast({ message: "Failed to create onchain game" });
       setTimeout(() => setToast(null), 3000);
+    } finally {
+      setIsCreatingGame(false);
     }
   };
+
 
 
   // 🧠 localStorage safe-access helper
@@ -262,14 +270,20 @@ export default function Game() {
         <Grid board={board} onMove={submitMove} isDisabled={gameOver || won} />
 
         <div className="flex gap-4 w-full max-w-xs">
-          <motion.button
-            onClick={handleNewGame}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            New Game
-          </motion.button>
+        <motion.button
+          onClick={handleNewGame}
+          disabled={isCreatingGame}
+          className={`flex-1 font-bold py-3 rounded-xl transition-colors ${
+            isCreatingGame
+              ? "bg-gray-400 text-white cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700 text-white"
+          }`}
+          whileHover={!isCreatingGame ? { scale: 1.05 } : {}}
+          whileTap={!isCreatingGame ? { scale: 0.95 } : {}}
+        >
+          {isCreatingGame ? "Waiting for confirmation..." : "New Game"}
+        </motion.button>
+
           <motion.button
             onClick={() => setShowSettings(true)}
             className="bg-white hover:bg-gray-100 text-blue-600 font-bold py-3 px-4 rounded-xl transition-colors border-2 border-blue-600"
@@ -322,9 +336,6 @@ export default function Game() {
         )}
       </AnimatePresence>
 
-      {lowBalance && (
-        <LowBalanceModal onTopUp={() => refetch()} onCancel={() => setLowBalance(false)} />
-      )}
 
       {won && (
         <WinModal
