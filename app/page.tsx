@@ -10,12 +10,10 @@ import SettingsModal from "@/components/SettingsModal";
 import { sdk } from "@farcaster/miniapp-sdk";
 import { ethers } from "ethers";
 
-
 export default function HomePage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
-
   const { data: balanceData, refetch } = useBalance({
     address,
     chainId: 8453,
@@ -25,7 +23,11 @@ export default function HomePage() {
   const [isFarcaster, setIsFarcaster] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  // 🟣 Detect Farcaster + mark app ready
+  const balance = parseFloat(balanceData?.formatted || "0");
+
+  // -----------------------------
+  // Detect Farcaster and mark SDK ready
+  // -----------------------------
   useEffect(() => {
     try {
       sdk.actions.ready();
@@ -37,36 +39,37 @@ export default function HomePage() {
     }
   }, []);
 
-  // 🟣 Handle Farcaster wallet or RainbowKit wallet
+  // -----------------------------
+  // Helper: fetch Farcaster wallet
+  // -----------------------------
+  const fetchFarcasterWallet = async (): Promise<string | null> => {
+    try {
+      const accounts = await sdk.wallet.ethProvider.request?.({ method: "eth_accounts" }) || [];
+      const addr = accounts[0];
+      if (!addr) return null;
+
+      // Optional: create ethers signer if you need it later
+      // const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider);
+      // const signer = await provider.getSigner();
+
+      return addr;
+    } catch (err) {
+      console.warn("Farcaster fetch error:", err);
+      return null;
+    }
+  };
+
+  // -----------------------------
+  // Fetch connected wallet (Farcaster or RainbowKit)
+  // -----------------------------
   useEffect(() => {
     const fetchWallet = async () => {
-      try {
-        if (isFarcaster) {
-          // 🟣 Request accounts from the Farcaster wallet provider
-          const accounts = await sdk.wallet.ethProvider.request({
-            method: "eth_requestAccounts",
-          });
-
-          const addr = accounts?.[0];
-          if (!addr) throw new Error("No Farcaster account returned");
-
-          // Create an ethers provider/signer
-          const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider);
-          const signer = await provider.getSigner();
-
-          setWalletAddress(addr);
-          // Optionally store signer if you use it elsewhere
-          // setGameSigner(signer);
-        } 
-        else if (isConnected && address) {
-          // Browser wallet (RainbowKit/MetaMask)
-          setWalletAddress(address);
-        } 
-        else {
-          setWalletAddress(null);
-        }
-      } catch (err) {
-        console.warn("Error fetching wallet:", err);
+      if (isFarcaster) {
+        const addr = await fetchFarcasterWallet();
+        setWalletAddress(addr);
+      } else if (isConnected && address) {
+        setWalletAddress(address);
+      } else {
         setWalletAddress(null);
       }
     };
@@ -74,8 +77,9 @@ export default function HomePage() {
     fetchWallet();
   }, [isFarcaster, isConnected, address]);
 
-
+  // -----------------------------
   // Refresh balance every 10s
+  // -----------------------------
   useEffect(() => {
     const interval = setInterval(() => {
       refetch();
@@ -83,10 +87,12 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [refetch]);
 
-  const balance = parseFloat(balanceData?.formatted || "0");
-
+  // -----------------------------
+  // Render UI
+  // -----------------------------
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-600 to-blue-50 flex flex-col relative">
+      {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white pt-12 pb-8 px-6 text-center">
         <motion.h1
           className="text-6xl font-bold mb-2"
@@ -106,6 +112,7 @@ export default function HomePage() {
         </motion.p>
       </div>
 
+      {/* Wallet bubble */}
       {walletAddress && (
         <div className="absolute top-4 right-4">
           <WalletBubble
@@ -116,6 +123,7 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
         {!walletAddress ? (
           <motion.div
@@ -127,6 +135,8 @@ export default function HomePage() {
             <p className="text-lg mb-6 text-base-text">
               Connect your wallet to play
             </p>
+
+            {/* RainbowKit / MetaMask / WalletConnect */}
             {!isFarcaster && (
               <motion.button
                 onClick={openConnectModal}
@@ -137,10 +147,20 @@ export default function HomePage() {
                 Connect Wallet
               </motion.button>
             )}
+
+            {/* Farcaster Wallet */}
             {isFarcaster && (
-              <p className="text-blue-600 font-semibold">
-                Farcaster wallet detected
-              </p>
+              <motion.button
+                onClick={async () => {
+                  const addr = await fetchFarcasterWallet();
+                  setWalletAddress(addr);
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-2xl text-lg transition-colors w-full max-w-xs"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Connect Farcaster Wallet
+              </motion.button>
             )}
           </motion.div>
         ) : (
@@ -158,6 +178,7 @@ export default function HomePage() {
             >
               PLAY
             </motion.button>
+
             <motion.button
               onClick={() => router.push("/leaderboard")}
               className="bg-white hover:bg-gray-100 text-blue-600 font-bold py-4 px-12 rounded-2xl text-2xl transition-colors w-full border-2 border-blue-600"
@@ -170,6 +191,7 @@ export default function HomePage() {
         )}
       </div>
 
+      {/* Settings Modal */}
       {showSettings && (
         <SettingsModal
           address={walletAddress}

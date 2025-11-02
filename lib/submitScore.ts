@@ -1,5 +1,5 @@
 // /lib/submitScore.ts
-import { Contract, keccak256, toUtf8Bytes, JsonRpcProvider, FetchRequest } from "ethers";
+import { Contract, keccak256, toUtf8Bytes, Signer, type LogDescription, type Result, type BigNumberish } from "ethers";
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!;
 const ABI = [
@@ -9,36 +9,53 @@ const ABI = [
   "event ScoreSubmitted(uint256 indexed gameId, address indexed player, bytes32 finalBoardHash, uint32 finalScore)"
 ];
 
-// ✅ Base mainnet RPC
-const BASE_RPC = process.env.NEXT_PUBLIC_BASE_RPC!;
+// -------------------------------
+// Types
+// -------------------------------
+export type LeaderboardEntry = {
+  name: string;
+  score: number;
+  date: string;
+};
+
+type GameCreatedEventArgs = {
+  gameId: BigNumberish;
+  player: string;
+  boardHash: string;
+};
+
 // -------------------------------
 // CREATE GAME ONCHAIN
 // -------------------------------
-export async function createGameOnChain(signer: any, board: number[][]): Promise<number> {
+export async function createGameOnChain(signer: Signer, board: number[][]): Promise<number> {
   const contract = new Contract(CONTRACT_ADDRESS, ABI, signer);
   const boardHash = keccak256(toUtf8Bytes(JSON.stringify(board)));
+
   const tx = await contract.createGame(boardHash);
   const receipt = await tx.wait();
 
   const ev = receipt.logs
-    .map((l: any) => {
+    .map((log: any) => {
       try {
-        return contract.interface.parseLog(l);
+        return contract.interface.parseLog(log);
       } catch {
         return null;
       }
     })
-    .find((p: any) => p && p.name === "GameCreated");
+    .find((parsed: LogDescription | null): parsed is LogDescription => parsed?.name === "GameCreated");
 
   if (!ev) throw new Error("GameCreated event not found");
-  return Number(ev.args.gameId);
+
+  const gameId = ev.args["gameId"];
+  return Number(gameId);
 }
+
 
 // -------------------------------
 // SUBMIT FINAL SCORE
 // -------------------------------
 export async function submitFinalScoreOnChain(
-  signer: any,
+  signer: Signer,
   gameId: number,
   board: number[][],
   finalScore: number
@@ -48,20 +65,18 @@ export async function submitFinalScoreOnChain(
 
   const tx = await contract.submitScore(gameId, finalBoardHash, finalScore);
   const receipt = await tx.wait();
+
   return receipt.transactionHash || receipt.hash || "";
 }
 
 // -------------------------------
 // FETCH ONCHAIN LEADERBOARD
 // -------------------------------
-// -------------------------------
-// FETCH ONCHAIN LEADERBOARD (chunked)
-// -------------------------------
-export async function fetchLeaderboard() {
+export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
   try {
     const res = await fetch("/api/leaderboard");
     if (!res.ok) throw new Error("Failed to fetch leaderboard");
-    return await res.json();
+    return (await res.json()) as LeaderboardEntry[];
   } catch (err) {
     console.error("fetchLeaderboard error:", err);
     return [];
