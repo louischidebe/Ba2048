@@ -119,7 +119,7 @@ export default function Leaderboard() {
 
       {showSettings && (
         <SettingsModal
-          address={address}
+          address={address ?? null}
           balance={balance}
           onClose={() => setShowSettings(false)}
           onLogout={() => window.location.reload()}
