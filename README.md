@@ -8,7 +8,7 @@ An on-chain twist on the classic 2048 game — powered by Base, ethers.js, and N
 - Cached leaderboard using Next.js API routes
 
 ## Contracts
-- `Game2048.sol` — deployed at `0x271208dc7813dEe88487a17CABa0a822fAb7D8D2` on Base mainnet.
+- `Ba2048.sol` — deployed at `0x271208dc7813dEe88487a17CABa0a822fAb7D8D2` on Base mainnet.
 
 ## Getting Started
 ```bash
