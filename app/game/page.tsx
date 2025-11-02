@@ -4,63 +4,88 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Grid from "@/components/Grid";
 import Toast from "@/components/Toast";
-import LowBalanceModal from "@/components/LowBalanceModal";
 import WinModal from "@/components/WinModal";
 import SettingsModal from "@/components/SettingsModal";
 import { initializeBoard, move, canMove } from "@/lib/game-logic";
-import { useAccount, useConnect, useDisconnect, useBalance } from "wagmi";
-import { injected } from "wagmi/connectors";
+import { useAccount, useDisconnect, useBalance } from "wagmi";
 import { createGameOnChain, submitFinalScoreOnChain } from "@/lib/submitScore";
 import { ethers } from "ethers";
 import { useRouter } from "next/navigation";
+import { sdk } from "@farcaster/miniapp-sdk";
 
 const MOVE_COST = 0.00003;
 const DEV_FEE = 0.2;
 const TOTAL_MOVE_COST = MOVE_COST * (1 + DEV_FEE);
-const MIN_BALANCE = TOTAL_MOVE_COST;
 
 export default function Game() {
-  // Wagmi hooks for wallet connection
+  const router = useRouter();
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
-  const [isCreatingGame, setIsCreatingGame] = useState(false);
-
-  const [gameId, setGameId] = useState<number | null>(null);
-  const [playerAddress, setPlayerAddress] = useState<string | null>(null);
-  const [gameSigner, setGameSigner] = useState<any>(null);
-
 
   const { data: balanceData, refetch } = useBalance({
     address,
     chainId: 8453,
   });
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refetch();
-    }, 10000); // refresh every 10s
-    return () => clearInterval(interval);
-  }, [refetch]);
-
-
-  const balance = parseFloat(balanceData?.formatted || "0");
-
+  const [isFarcaster, setIsFarcaster] = useState(false);
+  const [playerAddress, setPlayerAddress] = useState<string | null>(null);
+  const [gameSigner, setGameSigner] = useState<any>(null);
   const [board, setBoard] = useState(initializeBoard());
   const [moves, setMoves] = useState(0);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [toast, setToast] = useState<{ message: string; txHash?: string } | null>(null);
-  const [lowBalance, setLowBalance] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const submitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isCreatingGame, setIsCreatingGame] = useState(false);
+  const [gameId, setGameId] = useState<number | null>(null);
 
-  // 🧠 Get signer from the connected wallet
+  // 🟣 Detect Farcaster
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined" && (window as any).farcaster) {
+        setIsFarcaster(true);
+      }
+    } catch (e) {
+      console.warn("Farcaster not detected:", e);
+    }
+  }, []);
+
+  // 🟣 Unified signer function
   const getSigner = async () => {
+    if (isFarcaster) {
+      try {
+        const signer = await sdk.wallet.getSigner();
+        const addr = await signer.getAddress();
+        setPlayerAddress(addr);
+        setGameSigner(signer);
+        return signer;
+      } catch (err) {
+        console.error("Failed to get Farcaster signer:", err);
+      }
+    }
+
+    // fallback: browser wallet
     if (!window.ethereum) throw new Error("No wallet provider found");
     const provider = new ethers.BrowserProvider(window.ethereum);
-    return await provider.getSigner();
+    const signer = await provider.getSigner();
+    const addr = await signer.getAddress();
+    setPlayerAddress(addr);
+    setGameSigner(signer);
+    return signer;
   };
+
+  // refresh balance every 10s
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [refetch]);
+
+  const balance = parseFloat(balanceData?.formatted || "0");
+
+
 
   const movesLeft = Math.floor(balance / TOTAL_MOVE_COST);
 
@@ -211,8 +236,6 @@ export default function Game() {
     localStorage.setItem("leaderboard", JSON.stringify(data));
   };
 
-  // --- UI ---
-  const router = useRouter();
 
   useEffect(() => {
     if (!isConnected) router.push("/");

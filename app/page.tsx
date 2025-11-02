@@ -19,32 +19,51 @@ export default function HomePage() {
     chainId: 8453,
   });
 
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isFarcaster, setIsFarcaster] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // 🟣 Detect Farcaster + mark app ready
+  useEffect(() => {
+    try {
+      sdk.actions.ready();
+      if (typeof window !== "undefined" && (window as any).farcaster) {
+        setIsFarcaster(true);
+      }
+    } catch (e) {
+      console.warn("Farcaster SDK not available:", e);
+    }
+  }, []);
+
+  // 🟣 Handle Farcaster wallet or RainbowKit wallet
+  useEffect(() => {
+    const fetchWallet = async () => {
+      if (isFarcaster) {
+        try {
+          const signer = await sdk.wallet.getSigner();
+          const addr = await signer.getAddress();
+          setWalletAddress(addr);
+        } catch (err) {
+          console.warn("Error fetching Farcaster wallet:", err);
+        }
+      } else if (isConnected && address) {
+        setWalletAddress(address);
+      } else {
+        setWalletAddress(null);
+      }
+    };
+    fetchWallet();
+  }, [isFarcaster, isConnected, address]);
+
+  // Refresh balance every 10s
   useEffect(() => {
     const interval = setInterval(() => {
       refetch();
-    }, 10000); // refresh every 10s
+    }, 10000);
     return () => clearInterval(interval);
   }, [refetch]);
 
-  useEffect(() => {
-  // Notify Farcaster the app is ready to display
-  try {
-    sdk.actions.ready();
-  } catch (e) {
-    console.warn("Farcaster SDK not available:", e);
-  }
-}, []);
-
-
-
   const balance = parseFloat(balanceData?.formatted || "0");
-  const [showSettings, setShowSettings] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (isConnected && address) setWalletAddress(address);
-    else setWalletAddress(null);
-  }, [isConnected, address]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-600 to-blue-50 flex flex-col relative">
@@ -67,7 +86,6 @@ export default function HomePage() {
         </motion.p>
       </div>
 
-      {/* Wallet bubble */}
       {walletAddress && (
         <div className="absolute top-4 right-4">
           <WalletBubble
@@ -78,7 +96,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
         {!walletAddress ? (
           <motion.div
@@ -90,14 +107,21 @@ export default function HomePage() {
             <p className="text-lg mb-6 text-base-text">
               Connect your wallet to play
             </p>
-            <motion.button
-              onClick={openConnectModal}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-2xl text-lg transition-colors w-full max-w-xs"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Connect Wallet
-            </motion.button>
+            {!isFarcaster && (
+              <motion.button
+                onClick={openConnectModal}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-2xl text-lg transition-colors w-full max-w-xs"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Connect Wallet
+              </motion.button>
+            )}
+            {isFarcaster && (
+              <p className="text-blue-600 font-semibold">
+                Farcaster wallet detected
+              </p>
+            )}
           </motion.div>
         ) : (
           <motion.div
