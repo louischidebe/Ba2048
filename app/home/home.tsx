@@ -14,11 +14,18 @@ interface HomeProps {
 
 export default function Home({ onPlay, onLeaderboard }: HomeProps) {
   const { address, isConnected } = useAccount();
-  const { data: balanceData } = useBalance({
+  const { data: balanceData, refetch } = useBalance({
     address,
-    chainId: 8453, // Base mainnet (use 84532 for testnet)
-    watch: true,
+    chainId: 8453,
   });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+    }, 10000); // refresh every 10s
+    return () => clearInterval(interval);
+  }, [refetch]);
+
   const balance = parseFloat(balanceData?.formatted || "0");
 
   const [walletAddress, setWalletAddress] = useState<string | null>(null);

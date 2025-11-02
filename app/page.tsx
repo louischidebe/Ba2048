@@ -13,11 +13,18 @@ export default function HomePage() {
   const { address, isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
 
-  const { data: balanceData } = useBalance({
+  const { data: balanceData, refetch } = useBalance({
     address,
-    chainId: 8453, // Base mainnet (or 84532 for Base Sepolia testnet)
-    watch: true,
+    chainId: 8453,
   });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+    }, 10000); // refresh every 10s
+    return () => clearInterval(interval);
+  }, [refetch]);
+
 
   const balance = parseFloat(balanceData?.formatted || "0");
   const [showSettings, setShowSettings] = useState(false);

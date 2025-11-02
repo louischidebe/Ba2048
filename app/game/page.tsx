@@ -31,9 +31,16 @@ export default function Game() {
 
   const { data: balanceData, refetch } = useBalance({
     address,
-    chainId: 8453, //
-    watch: true,
+    chainId: 8453,
   });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+    }, 10000); // refresh every 10s
+    return () => clearInterval(interval);
+  }, [refetch]);
+
 
   const balance = parseFloat(balanceData?.formatted || "0");
 

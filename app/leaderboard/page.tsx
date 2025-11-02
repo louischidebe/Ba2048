@@ -9,11 +9,18 @@ import { fetchLeaderboard } from "@/lib/submitScore";
 
 export default function Leaderboard() {
   const { address, isConnected } = useAccount();
-  const { data: balanceData } = useBalance({
+  const { data: balanceData, refetch } = useBalance({
     address,
     chainId: 8453,
-    watch: true,
   });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch();
+    }, 10000); // refresh every 10s
+    return () => clearInterval(interval);
+  }, [refetch]);
+
 
   const balance = parseFloat(balanceData?.formatted || "0");
   const [entries, setEntries] = useState<{ player: string; score: number }[]>([]);
