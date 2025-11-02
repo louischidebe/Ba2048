@@ -23,7 +23,13 @@ export default function Leaderboard() {
 
 
   const balance = parseFloat(balanceData?.formatted || "0");
-  const [entries, setEntries] = useState<{ player: string; score: number }[]>([]);
+type LeaderboardEntry = {
+  name: string;
+  score: number;
+  date?: string;
+};
+
+const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -31,7 +37,12 @@ export default function Leaderboard() {
     async function load() {
       try {
         const data = await fetchLeaderboard();
-        setEntries(data);
+        const formatted = data.map((item: any) => ({
+          name: item.player,   // rename to match your UI
+          score: item.score,
+        }));
+        setEntries(formatted);
+
       } catch (err) {
         console.error("Error fetching leaderboard:", err);
       } finally {
@@ -96,11 +107,14 @@ export default function Leaderboard() {
                   </span>
                   <div>
                     <p className="font-bold text-gray-900">
-                      {entry.player.slice(0, 6)}...{entry.player.slice(-4)}
-                      {address?.toLowerCase() === entry.player.toLowerCase() && (
+                      {entry.name
+                        ? `${entry.name.slice(0, 6)}...${entry.name.slice(-4)}`
+                        : "Unknown"}
+                      {address?.toLowerCase() === entry.name?.toLowerCase() && (
                         <span className="ml-2 text-green-600 font-bold">(You)</span>
                       )}
                     </p>
+
                   </div>
                 </div>
                 <p className="text-2xl font-bold text-blue-600">{entry.score}</p>
