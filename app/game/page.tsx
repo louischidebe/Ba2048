@@ -12,6 +12,7 @@ import { useAccount, useConnect, useDisconnect, useBalance } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { createGameOnChain, submitFinalScoreOnChain, postScoreToLeaderboard } from "@/lib/submitScore";
 import { ethers } from "ethers";
+import { useRouter } from "next/navigation";
 
 const MOVE_COST = 0.00003;
 const DEV_FEE = 0.2;
@@ -21,7 +22,6 @@ const MIN_BALANCE = TOTAL_MOVE_COST;
 export default function Game() {
   // Wagmi hooks for wallet connection
   const { address, isConnected } = useAccount();
-  const { connect } = useConnect({ connector: injected() });
   const { disconnect } = useDisconnect();
 
   const [gameId, setGameId] = useState<number | null>(null);
@@ -197,19 +197,11 @@ export default function Game() {
   };
 
   // --- UI ---
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-blue-50 text-blue-700">
-        <h1 className="text-2xl font-bold mb-4">Connect Your Wallet</h1>
-        <button
-          onClick={() => connect()}
-          className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold"
-        >
-          Connect Wallet
-        </button>
-      </div>
-    );
-  }
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isConnected) router.push("/");
+  }, [isConnected, router]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-600 to-blue-50 flex flex-col">
