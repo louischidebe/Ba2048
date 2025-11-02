@@ -55,17 +55,25 @@ export default function Game() {
   const getSigner = async () => {
     if (isFarcaster) {
       try {
-        const signer = await sdk.wallet.getSigner();
-        const addr = await signer.getAddress();
+        // Request account access through Farcaster’s injected provider
+        const accounts = await sdk.wallet.ethProvider.request({
+          method: "eth_requestAccounts",
+        });
+
+        const addr = accounts[0];
+        const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider);
+        const signer = await provider.getSigner();
+
         setPlayerAddress(addr);
         setGameSigner(signer);
         return signer;
       } catch (err) {
         console.error("Failed to get Farcaster signer:", err);
+        throw err;
       }
     }
 
-    // fallback: browser wallet
+    // Fallback: RainbowKit or MetaMask
     if (!window.ethereum) throw new Error("No wallet provider found");
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
@@ -74,6 +82,7 @@ export default function Game() {
     setGameSigner(signer);
     return signer;
   };
+
 
   // refresh balance every 10s
   useEffect(() => {

@@ -8,6 +8,8 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import WalletBubble from "@/components/WalletBubble";
 import SettingsModal from "@/components/SettingsModal";
 import { sdk } from "@farcaster/miniapp-sdk";
+import { ethers } from "ethers";
+
 
 export default function HomePage() {
   const router = useRouter();
@@ -38,22 +40,40 @@ export default function HomePage() {
   // 🟣 Handle Farcaster wallet or RainbowKit wallet
   useEffect(() => {
     const fetchWallet = async () => {
-      if (isFarcaster) {
-        try {
-          const signer = await sdk.wallet.getSigner();
-          const addr = await signer.getAddress();
+      try {
+        if (isFarcaster) {
+          // 🟣 Request accounts from the Farcaster wallet provider
+          const accounts = await sdk.wallet.ethProvider.request({
+            method: "eth_requestAccounts",
+          });
+
+          const addr = accounts?.[0];
+          if (!addr) throw new Error("No Farcaster account returned");
+
+          // Create an ethers provider/signer
+          const provider = new ethers.BrowserProvider(sdk.wallet.ethProvider);
+          const signer = await provider.getSigner();
+
           setWalletAddress(addr);
-        } catch (err) {
-          console.warn("Error fetching Farcaster wallet:", err);
+          // Optionally store signer if you use it elsewhere
+          // setGameSigner(signer);
+        } 
+        else if (isConnected && address) {
+          // Browser wallet (RainbowKit/MetaMask)
+          setWalletAddress(address);
+        } 
+        else {
+          setWalletAddress(null);
         }
-      } else if (isConnected && address) {
-        setWalletAddress(address);
-      } else {
+      } catch (err) {
+        console.warn("Error fetching wallet:", err);
         setWalletAddress(null);
       }
     };
+
     fetchWallet();
   }, [isFarcaster, isConnected, address]);
+
 
   // Refresh balance every 10s
   useEffect(() => {
