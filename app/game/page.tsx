@@ -350,7 +350,7 @@ export default function Game() {
 
       {showSettings && (
         <SettingsModal
-          address={address}
+          address={address ?? null}
           balance={balance}
           onClose={() => setShowSettings(false)}
           onLogout={() => disconnect()}
