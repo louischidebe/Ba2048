@@ -7,6 +7,7 @@ import { useAccount, useBalance } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import WalletBubble from "@/components/WalletBubble";
 import SettingsModal from "@/components/SettingsModal";
+import { sdk } from "@farcaster/miniapp-sdk";
 
 export default function HomePage() {
   const router = useRouter();
@@ -24,6 +25,16 @@ export default function HomePage() {
     }, 10000); // refresh every 10s
     return () => clearInterval(interval);
   }, [refetch]);
+
+  useEffect(() => {
+  // Notify Farcaster the app is ready to display
+  try {
+    sdk.actions.ready();
+  } catch (e) {
+    console.warn("Farcaster SDK not available:", e);
+  }
+}, []);
+
 
 
   const balance = parseFloat(balanceData?.formatted || "0");
