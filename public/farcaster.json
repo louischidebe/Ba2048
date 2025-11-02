@@ -1,0 +1,13 @@
+{
+  "name": "Ba2048",
+  "description": "Merge tiles, get scores, and climb the leaderboard on Base. 2048 reimagined for the onchain world, built for Farcaster players and Based people.",
+  "icon_url": "https://ba2048.vercel.app/icon.png",
+  "splash_image_url": "https://ba2048.vercel.app/splash.png",
+  "splash_background_color": "#0052FF",
+  "home_url": "https://ba2048.vercel.app",
+  "account_association": {
+    "header": "eyJmaWQiOjUxNTU4NSwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweGZBMEYwNDRmN2E0ZTZiOEM3M0Y1ZTVlMWIzMzBCMjQ0NzU1QzgxZGMifQ",
+    "payload": "eyJkb21haW4iOiJiYTIwNDgudmVyY2VsLmFwcCJ9",
+    "signature": "YWnW5PHNJyKmXIWGD/id5kq941rcdxpIsEg6iS3tLLppaNKHqd2CT8pTvOOlU1r3PE6Fh28IlNT1VxtX2kKAwBw="
+  }
+}
